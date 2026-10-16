@@ -1,0 +1,261 @@
+{
+  "summary": {
+    "title": "Bookstore Application Threat Model",
+    "owner": "Security Team",
+    "description": "Модель угроз для консольного приложения онлайн-магазина книг (Python + PostgreSQL в Docker). Методология STRIDE.",
+    "id": 0
+  },
+  "detail": {
+    "contributors": [],
+    "diagrams": [
+      {
+        "id": 0,
+        "title": "Диаграмма потоков данных — Онлайн-магазин книг",
+        "diagramType": "STRIDE",
+        "placeholder": "New STRIDE diagram description",
+        "thumbnail": "./public/content/images/thumbnail.stride.jpg",
+        "version": "2.3.0",
+        "cells": [
+          {
+            "position": { "x": 50, "y": 280 },
+            "size": { "width": 112.5, "height": 60 },
+            "attrs": {},
+            "visible": true,
+            "shape": "actor",
+            "zOrder": 1,
+            "id": "actor-user",
+            "data": {
+              "name": "Пользователь (Оператор)",
+              "description": "Пользователь консольного приложения, вводит данные через stdin",
+              "type": "tm.Actor",
+              "outOfScope": false,
+              "providesAuthentication": false,
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 330, "y": 250 },
+            "size": { "width": 100, "height": 100 },
+            "attrs": {},
+            "visible": true,
+            "shape": "process",
+            "zOrder": 2,
+            "id": "process-app",
+            "data": {
+              "name": "bookstore-app (Python)",
+              "description": "Консольное CLI-приложение на Python (app.py), работает в Docker-контейнере. Выполняет CRUD-операции с БД.",
+              "type": "tm.Process",
+              "outOfScope": false,
+              "privilegeLevel": "appuser (ограниченные права SELECT/INSERT/UPDATE/DELETE)",
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 650, "y": 280 },
+            "size": { "width": 120, "height": 60 },
+            "attrs": {},
+            "visible": true,
+            "shape": "store",
+            "zOrder": 3,
+            "id": "store-postgres",
+            "data": {
+              "name": "PostgreSQL (bookstore DB)",
+              "description": "СУБД PostgreSQL 18 в Docker-контейнере. Хранит таблицы: authors, books, customers, orders, order_items. Аутентификация scram-sha-256.",
+              "type": "tm.Store",
+              "outOfScope": false,
+              "isALog": false,
+              "storesCredentials": true,
+              "isEncrypted": false,
+              "isSigned": false,
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 330, "y": 450 },
+            "size": { "width": 100, "height": 60 },
+            "attrs": {},
+            "visible": true,
+            "shape": "store",
+            "zOrder": 4,
+            "id": "store-logfile",
+            "data": {
+              "name": "Лог-файл (bookstore.log)",
+              "description": "Файл журнала приложения, хранится в Docker volume pinger_logs по пути /app/logs/bookstore.log",
+              "type": "tm.Store",
+              "outOfScope": false,
+              "isALog": true,
+              "storesCredentials": false,
+              "isEncrypted": false,
+              "isSigned": false,
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 330, "y": 80 },
+            "size": { "width": 100, "height": 60 },
+            "attrs": {},
+            "visible": true,
+            "shape": "store",
+            "zOrder": 5,
+            "id": "store-config",
+            "data": {
+              "name": "config.json / .env",
+              "description": "Конфигурационные файлы: config.json (host, port, database), .env (учётные данные БД — DB_USER, DB_PASSWORD)",
+              "type": "tm.Store",
+              "outOfScope": false,
+              "isALog": false,
+              "storesCredentials": true,
+              "isEncrypted": false,
+              "isSigned": false,
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 50, "y": 80 },
+            "size": { "width": 100, "height": 60 },
+            "attrs": {},
+            "visible": true,
+            "shape": "store",
+            "zOrder": 6,
+            "id": "store-docker-volume",
+            "data": {
+              "name": "Docker Volume (postgres_data)",
+              "description": "Персистентный том Docker для хранения данных PostgreSQL",
+              "type": "tm.Store",
+              "outOfScope": false,
+              "isALog": false,
+              "storesCredentials": false,
+              "isEncrypted": false,
+              "isSigned": false,
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "source": { "id": "actor-user" },
+            "target": { "id": "process-app" },
+            "vertices": [],
+            "id": "flow-user-to-app",
+            "data": {
+              "name": "Ввод пользователя (stdin)",
+              "description": "Пользователь вводит команды меню, значения фильтров, данные для вставки/обновления через stdin",
+              "type": "tm.Flow",
+              "isBidirectional": true,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "stdin/stdout",
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "source": { "id": "process-app" },
+            "target": { "id": "store-postgres" },
+            "vertices": [],
+            "id": "flow-app-to-db",
+            "data": {
+              "name": "SQL-запросы (psycopg / TCP:5432)",
+              "description": "Приложение отправляет параметризованные SQL-запросы в PostgreSQL через библиотеку psycopg по TCP-порту 5432",
+              "type": "tm.Flow",
+              "isBidirectional": true,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "PostgreSQL Wire Protocol (TCP:5432)",
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "source": { "id": "process-app" },
+            "target": { "id": "store-logfile" },
+            "vertices": [],
+            "id": "flow-app-to-log",
+            "data": {
+              "name": "Запись в лог-файл",
+              "description": "Приложение пишет события (подключение, операции, ошибки) в лог-файл /app/logs/bookstore.log",
+              "type": "tm.Flow",
+              "isBidirectional": false,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "File I/O",
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "source": { "id": "store-config" },
+            "target": { "id": "process-app" },
+            "vertices": [],
+            "id": "flow-config-to-app",
+            "data": {
+              "name": "Чтение конфигурации",
+              "description": "Приложение читает config.json и переменные окружения из .env при запуске для получения параметров подключения и учётных данных",
+              "type": "tm.Flow",
+              "isBidirectional": false,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "File I/O / Environment Variables",
+              "hasOpenThreats": true,
+              "threats": []
+            }
+          },
+          {
+            "source": { "id": "store-postgres" },
+            "target": { "id": "store-docker-volume" },
+            "vertices": [],
+            "id": "flow-db-to-volume",
+            "data": {
+              "name": "Персистентное хранение данных",
+              "description": "PostgreSQL сохраняет данные в Docker volume postgres_data для обеспечения персистентности между перезапусками",
+              "type": "tm.Flow",
+              "isBidirectional": true,
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "protocol": "File I/O",
+              "hasOpenThreats": false,
+              "threats": []
+            }
+          },
+          {
+            "position": { "x": 200, "y": 180 },
+            "size": { "width": 550, "height": 350 },
+            "attrs": {},
+            "visible": true,
+            "shape": "trust-boundary-box",
+            "zOrder": -1,
+            "id": "boundary-docker",
+            "data": {
+              "name": "Docker Network (Граница доверия)",
+              "description": "Внутренняя сеть Docker Compose — все контейнеры и тома находятся в изолированной сети",
+              "type": "tm.BoundaryBox",
+              "isTrustBoundary": true
+            }
+          },
+          {
+            "position": { "x": 10, "y": 230 },
+            "size": { "width": 180, "height": 160 },
+            "attrs": {},
+            "visible": true,
+            "shape": "trust-boundary-box",
+            "zOrder": -1,
+            "id": "boundary-user",
+            "data": {
+              "name": "Внешняя зона (Пользователь)",
+              "description": "Пользователь находится за пределами Docker-инфраструктуры",
+              "type": "tm.BoundaryBox",
+              "isTrustBoundary": true
+            }
+          }
+        ]
+      }
+    ],
+    "diagramTop": 1,
+    "reviewer": "Security Analyst",
+    "threatTop": 20
+  }
+}
